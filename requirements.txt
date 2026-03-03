@@ -1,0 +1,14 @@
+numpy
+chardet
+pandas >= 2.1.0
+scikit-learn
+scikit-image
+anytree
+ipywidgets
+pyvista
+tqdm
+numba
+tables
+pytest
+psutil
+dask
