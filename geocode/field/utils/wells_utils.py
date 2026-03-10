@@ -7,12 +7,12 @@ from numpy.typing import NDArray
 import numpy as np
 import pandas as pd
 
-import resdp
-import resdp.binary
-from resdp import DataType
+import georead
+import georead.binary
+from georead import DataType
 
 
-def load_welltrack(data: DataType, binary_data: resdp.binary.BinaryData, logger: logging.Logger) -> pd.DataFrame | None:
+def load_welltrack(data: DataType, binary_data: georead.binary.BinaryData, logger: logging.Logger) -> pd.DataFrame | None:
     """Load welltrack."""
     _ = binary_data, logger
     section = 'SCHEDULE'
@@ -30,8 +30,8 @@ def load_welltrack(data: DataType, binary_data: resdp.binary.BinaryData, logger:
         return None
     return pd.concat(res)
 
-def load_results(_data: resdp.DataType,
-                 binary_data: resdp.binary.BinaryData | None,
+def load_results(_data: georead.DataType,
+                 binary_data: georead.binary.BinaryData | None,
                  logger: logging.Logger) -> pd.DataFrame | None:
     """Load results."""
     _ = _data, logger

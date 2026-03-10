@@ -1,12 +1,13 @@
 """Getting wellblocks."""
 from typing import cast
 import numpy as np
-from resdp import INT_NAN
 import numpy.typing as npt
 import pandas as pd
 from numba import njit
 import vtk
 from vtkmodules.util.numpy_support import vtk_to_numpy
+
+from georead import INT_NAN
 
 @njit
 def point_in_box(point, bounding_box):

@@ -7,8 +7,8 @@ import warnings
 from weakref import ref
 import numpy as np
 
-import resdp
-import resdp.binary
+import georead
+import georead.binary
 
 from .utils.decorators import apply_to_each_input
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 AttributeLoaderType: TypeAlias = Callable[
-    [resdp.DataType, resdp.binary.BinaryData, logging.Logger], resdp.ValueType]
+    [georead.DataType, georead.binary.BinaryData, logging.Logger], georead.ValueType]
 
 
 class BaseComponent:
@@ -142,7 +142,7 @@ class Attribute(Generic[T]):
                  custom_ascii_loader=None,
                  postprocess: Callable[[Attribute[T]], None] | None=None,
                  not_present=None,
-                 binary_file: resdp.binary.FileType | None=None,
+                 binary_file: georead.binary.FileType | None=None,
                  binary_section=None,
                  binary_process=None,
                  sequential: bool=False):
@@ -177,7 +177,7 @@ class Attribute(Generic[T]):
             self._custom_ascii_loader = custom_ascii_loader
             if (binary_file is None) != (binary_section is None):
                 raise ValueError('Either both `binary_file` and `binary_section` are provided either none.')
-            self._binary_file: resdp.binary.FileType | None = binary_file
+            self._binary_file: georead.binary.FileType | None = binary_file
             self._binary_section: str | None = binary_section
             self._binary_process = binary_process
 
@@ -195,7 +195,7 @@ class Attribute(Generic[T]):
         self._component: Callable[[], T | None] | None = None
         self._sequential = sequential
 
-    def _load_value(self, data, binary_data: resdp.binary.BinaryData, logger):
+    def _load_value(self, data, binary_data: georead.binary.BinaryData, logger):
         if self.component is None:
             raise ValueError('Attribute should be associated with `BaseComponent` object.')
         if self._custom_loader is not None:
@@ -224,7 +224,7 @@ class Attribute(Generic[T]):
         self._value = self._not_present
         return self
 
-    def _load_ecl_binary_value(self, binary_data: resdp.binary.BinaryData | None, logger):
+    def _load_ecl_binary_value(self, binary_data: georead.binary.BinaryData | None, logger):
         _ = logger
         if binary_data is None:
             return None

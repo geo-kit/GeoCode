@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from numba import njit
 
-import resdp
+import georead
 
 _SHIFTS = {
     (1, 0): (1, 0, 0),
@@ -427,5 +427,5 @@ def fill_missing_actnum(attr):
 def gridhead_to_dimens(val):
     """DataFrame from DIMENS."""
     return pd.DataFrame(
-        val[np.newaxis, 1:4], columns = resdp.DATA_DIRECTORY['DIMENS'].specification.columns
+        val[np.newaxis, 1:4], columns = georead.DATA_DIRECTORY['DIMENS'].specification.columns
     )

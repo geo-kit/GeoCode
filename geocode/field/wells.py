@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 from ipywidgets import interact
 import ipywidgets as widgets
 
-import resdp
-import resdp.binary
+import georead
+import georead.binary
 
 from .base_tree import BaseTree, BaseTreeNode
 from .base_component import Attribute, T
@@ -36,7 +36,7 @@ class WellScheduleAttribute(Attribute[T]):
                  custom_ascii_loader=None,
                  postprocess=None,
                  not_present=None,
-                 binary_file: resdp.binary.FileType | None = None,
+                 binary_file: georead.binary.FileType | None = None,
                  binary_section=None,
                  binary_process=None,
                  sequential: bool=False,
@@ -57,8 +57,8 @@ class WellScheduleAttribute(Attribute[T]):
 
     @override
     def _load_value(self,
-                    data: resdp.DataType,
-                    binary_data: resdp.binary.BinaryData,
+                    data: georead.DataType,
+                    binary_data: georead.binary.BinaryData,
                     logger: logging.Logger | None) -> Self:
         cur_date = None
         section = cast(str, self._section)

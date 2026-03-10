@@ -10,8 +10,8 @@ import pyvista as pv
 import vtk
 from vtk.util.numpy_support import numpy_to_vtk # pylint: disable=no-name-in-module, import-error
 
-import resdp
-import resdp.binary
+import georead
+import georead.binary
 
 from .grids import Grid, specify_grid
 from .rock import Rock
@@ -63,8 +63,8 @@ class Field:
         self.path: pathlib.Path | None = pathlib.Path(path) if path is not None else None
         self._components = {}
 
-        self._data = resdp.DataType
-        self._binary_data = resdp.DataType | None
+        self._data = georead.DataType
+        self._binary_data = georead.DataType | None
 
         logging.shutdown()
         handlers = [logging.StreamHandler(sys.stdout)]
@@ -151,9 +151,9 @@ class Field:
 
     def _load_data(self, include_binary=True):
         """Load model in DATA format."""
-        self._data = resdp.load(self.path)
+        self._data = georead.load(self.path)
 
-        self._binary_data = resdp.binary.load(self.path) if include_binary else None
+        self._binary_data = georead.binary.load(self.path) if include_binary else None
 
         for _, comp in self.items():
             comp.load(self._data, self._binary_data, self._logger)
