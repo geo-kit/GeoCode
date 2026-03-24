@@ -293,7 +293,7 @@ class OrthogonalGrid(Grid):
     def get_xyz(self, ijk=None):
         """Get x, y, z coordinates of cell vertices."""
         if ijk is None:
-            xyz = np.zeros(tuple(self.dimens) + (8, 3))
+            xyz = np.zeros(tuple(self.dimens.values.ravel()) + (8, 3))
             xyz[..., 0] = self.origin[0]
             xyz[..., 1] = self.origin[1]
             px = np.cumsum(self.dx, axis=0)
