@@ -196,7 +196,7 @@ class Wells(BaseTree):
                 h_well: npt.NDArray[np.float_] | npt.NDArray[np.int_] = (
                         np.stack([(0, 0, grid.dz[i[0], i[1], i[2]]) for i in blocks]))
             else:
-                h_well = np.full(blocks.shape, np.NaN)
+                h_well = np.full(blocks.shape, np.nan)
             segment.blocks_info = pd.DataFrame(h_well, columns=['Hx', 'Hy', 'Hz'])
 
         else:
