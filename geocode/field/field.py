@@ -112,13 +112,15 @@ class Field:
         """Returns pairs of components's names and instance."""
         return self._components.items()
 
-    def load(self, include_binary=True):
+    def load(self, include_binary=True, verbose=1):
         """Load reservoir model data.
 
         Parameters
         ----------
         include_binary : bool
             Read data from binary files in RESULTS folder. Default to True.
+        verbose : int
+            Amount of information about the loading process. If 0, then silent mode; if positive, then standard output. Default is 1.
 
         Returns
         -------
@@ -132,7 +134,7 @@ class Field:
         fmt = os.path.splitext(name)[1].strip('.')
 
         if fmt.upper() in ['DATA', 'DAT']:
-            self._load_data(include_binary=include_binary)
+            self._load_data(include_binary=include_binary, verbose=verbose)
         else:
             raise NotImplementedError('Format {} is not supported.'.format(fmt))
 
@@ -149,9 +151,9 @@ class Field:
 
         return self
 
-    def _load_data(self, include_binary=True):
+    def _load_data(self, include_binary=True, verbose=1):
         """Load model in DATA format."""
-        self._data = georead.load(self.path)
+        self._data = georead.load(self.path, logger=self.logger if verbose else None)
 
         self._binary_data = georead.binary.load(self.path) if include_binary else None
 
