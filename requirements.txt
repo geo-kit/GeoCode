@@ -1,3 +1,4 @@
+setuptools
 numpy
 chardet
 pandas >= 2.1.0

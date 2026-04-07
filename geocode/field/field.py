@@ -120,7 +120,8 @@ class Field:
         include_binary : bool
             Read data from binary files in RESULTS folder. Default to True.
         verbose : int
-            Amount of information about the loading process. If 0, then silent mode; if positive, then standard output. Default is 1.
+            Amount of information about the loading process.
+            If 0, then silent mode; if positive, then standard output. Default is 1.
 
         Returns
         -------

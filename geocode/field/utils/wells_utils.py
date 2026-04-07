@@ -12,7 +12,9 @@ import georead.binary
 from georead import DataType
 
 
-def load_welltrack(data: DataType, binary_data: georead.binary.BinaryData, logger: logging.Logger) -> pd.DataFrame | None:
+def load_welltrack(data: DataType,
+                   binary_data: georead.binary.BinaryData,
+                   logger: logging.Logger) -> pd.DataFrame | None:
     """Load welltrack."""
     _ = binary_data, logger
     section = 'SCHEDULE'
