@@ -12,3 +12,4 @@ tables
 pytest
 psutil
 dask
+georead @ git+https://github.com/geo-kit/georead
