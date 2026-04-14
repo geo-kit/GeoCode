@@ -49,7 +49,6 @@ class TestModelLoad:
         """Testing wellblocks."""
         model.wells.get_blocks()
         for i, test in enumerate(TEST_WELLS):
-            print(i)
             well = model.wells[str(i)]
             assert np.all(well.welltrack[['X', 'Y', 'Z', 'MD']].values == np.array(test['welltrack']))
             if test['blocks']:
