@@ -15,6 +15,7 @@ disable=no-value-for-parameter,too-few-public-methods,unsubscriptable-object,no-
 
 [TYPECHECK]
 ignored-modules=numpy,skimage,skimage.transform
+ignore-patterns=^docs.*
 
 [SIMILARITIES]
 
