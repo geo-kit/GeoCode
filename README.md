@@ -12,24 +12,21 @@ Python framework for reservoir engineering.
 * reservoir representation with Grid, Rock, States, Wells, Faults, and PVT-tables
 * interactive 3D visualization
 * reservoir preprocessing tools
-* detailed [documentation]()
+* detailed [documentation](https://geo-kit.github.io/GeoCode/)
 * [tutorials](/tutorials) to explore the framework step-by-step
 
  > [!TIP]
- > Try out a new [web application]() based on DeepField for visualization and exploration of reservoir models.
+ > Try out a new [web application](https://github.com/geo-kit/GeoView.git) based on GeoCode for visualization and exploration of reservoir models.
 
 ## Installation
 
 Clone the repository:
 
-    git clone https://github.com/deepfield-team/GeoCode.git
+    git clone https://github.com/geo-kit/GeoCode.git
 
-Another option is to build the docker image with GeoCode inside.
-Instructions and dockerfile are provided in the [docker](./docker) directory.
 
-```
-Note: the project is in developement. We welcome contributions and collaborations.
-```
+> [!Note]
+> Note: the project is in developement. We welcome contributions and collaborations.
 
 ## Quick start
 
@@ -43,4 +40,4 @@ Load a reservoir model from `.DATA` file (some models are given in the [open_dat
 ```
 
 See the [tutorials](./tutorials) to explore the framework step-by-step
-and the [documentation]() for more details.
+and the [documentation](https://geo-kit.github.io/GeoCode/) for more details.
