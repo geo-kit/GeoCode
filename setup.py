@@ -1,4 +1,4 @@
-"""A framework for reservoir simulation."""
+"""Code developement for reservoir models."""
 import re
 from setuptools import setup, find_packages
 
@@ -15,28 +15,31 @@ setup(
     name='GeoCode',
     packages=find_packages(exclude=['docs']),
     version=VERSION,
-    url='https://github.com/deepfield-team/GeoCode',
+    url='https://github.com/geo-kit/GeoCode',
     license='Apache License 2.0',
-    author='deepfield-team',
+    author='geo-kit',
     author_email='',
-    description='A framework for reservoir simulation',
+    description='Code developement for reservoir models',
     long_description=LONG_DESCRIPTION,
     zip_safe=False,
     platforms='any',
     install_requires=[
-        'chardet',
-	'pandas',
-	'scikit-learn',
-	'scikit-image',
-	'anytree',
-	'ipywidgets',
-	'pyvista',
-	'tqdm',
-	'numba',
-	'tables',
-	'pytest',
-	'psutil',
-    'dask'
+        'setuptools',
+		'numpy',
+		'chardet',
+		'pandas >= 2.1.0',
+		'scikit-learn',
+		'scikit-image',
+		'anytree',
+		'ipywidgets',
+		'pyvista',
+		'tqdm',
+		'numba',
+		'tables',
+		'pytest',
+		'psutil',
+		'dask',
+		'georead @ git+https://github.com/geo-kit/georead'
     ],
     extras_require={
     },
@@ -48,7 +51,7 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.13',
         'Topic :: Scientific/Engineering'
     ],
 )
