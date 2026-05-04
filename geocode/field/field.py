@@ -333,9 +333,6 @@ class Field:
 
         plotter = pv.Plotter(notebook=notebook, title='Field')
 
-        threshold_widget = thresholding
-        slice_xyz_widget = slicing
-
         scaling = np.asarray(scaling).ravel()
         bbox = self.grid.bounding_box
         if len(scaling) == 1:
@@ -409,7 +406,7 @@ class Field:
             plotter.add_slider_widget(ch_timestep, rng=slider_range, value=timestep,
                                       title='Timestep', **slider_pos)
 
-        if slice_xyz_widget:
+        if slicing:
             def ch_slice_x(x):
                 x = (x - center[0]) * scaling[0]
                 widget_values['slice_xyz'][0] = x #pylint: disable=unsupported-assignment-operation
