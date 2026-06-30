@@ -96,16 +96,19 @@ def execute_tnav_models(models, license_url,
                 raise err
 
 
-def execute_julia_simulate(case_path, *, timeout_s=None):
+def execute_julia_simulate(case_path, *, result_dir=None, timeout_s=None):
     """Run the JutulDarcy driver (jutul_run.jl) as a Julia subprocess.
 
     The driver writes states.h5, wells.h5, cell_indices.h5 and manifest.json
-    under <case directory>/result/<case name>/.
+    under <case directory>/result/. Pass result_dir to override that location,
+    e.g. when several decks share a directory.
 
     Parameters
     ----------
     case_path : str | Path
         Path to the .DATA file.
+    result_dir : str | Path | None
+        Output directory. Defaults to <case directory>/result/.
     timeout_s : int | None
         Subprocess timeout in seconds.
 
@@ -115,7 +118,7 @@ def execute_julia_simulate(case_path, *, timeout_s=None):
         The model result directory.
     """
     case_path = Path(case_path)
-    result_dir = case_path.parent / "result" / case_path.stem
+    result_dir = Path(result_dir) if result_dir else case_path.parent / "result"
     if result_dir.exists():
         shutil.rmtree(result_dir)
     result_dir.mkdir(parents=True)
@@ -141,7 +144,7 @@ def _stream_julia(argv, logpath, timeout_s, script_name):
         from IPython.display import display
         output = display({"text/plain": ""}, raw=True, display_id=True)
         decoder = codecs.getincrementaldecoder("utf-8")("replace")
-        recent = ""
+        stable, buf = [], ""
     with open(logpath, "wb") as log:
         p = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)#pylint:disable=consider-using-with
         # Stream driver output (including the JutulDarcy progress bar) to the
@@ -152,15 +155,23 @@ def _stream_julia(argv, logpath, timeout_s, script_name):
                 break
             log.write(chunk)
             if notebook:
-                recent = (recent + decoder.decode(chunk))[-8192:]
-                lines = [line.strip() for line in re.sub(
-                    r"\x1b\[[0-?]*[ -/]*[@-~]", "", recent
-                ).replace("\r", "\n").splitlines() if line.strip()]
-                if lines:
-                    text = next((line for line in reversed(lines)
-                                 if line.startswith(("Progress ", "Reading "))),
-                                lines[-1])
-                    output.update({"text/plain": text}, raw=True)
+                # Keep the driver's phase labels ([1/5] ..., "base NPV ...")
+                # persistently, and collapse the repeating progress bars into a
+                # single live trailing line. \r is an in-place redraw, so the
+                # text after the last \r is a line's final state.
+                buf = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", buf + decoder.decode(chunk))
+                *complete, buf = buf.split("\n")
+                for line in complete:
+                    line = line.split("\r")[-1].strip()
+                    if not line or line.startswith(("Progress ", "Reading ")):
+                        continue
+                    if not stable or stable[-1] != line:
+                        stable.append(line)
+                stable[:] = stable[-400:]
+                live = buf.split("\r")[-1].strip()
+                output.update(
+                    {"text/plain": "\n".join(stable + ([live] if live else []))},
+                    raw=True)
             else:
                 sys.stdout.buffer.write(chunk)
                 sys.stdout.flush()
@@ -171,10 +182,13 @@ def _stream_julia(argv, logpath, timeout_s, script_name):
     if rc != 0:
         raise RuntimeError(f"{script_name} exited with code {rc}, see {logpath}")
     if notebook:
-        output.update({"text/plain": f"{script_name} completed; full output: {logpath}"}, raw=True)
+        output.update(
+            {"text/plain": "\n".join(
+                stable + [f"{script_name} completed; full output: {logpath}"])},
+            raw=True)
 
 
-def execute_julia_optimize(case_path, out_dir, *, params=None, timeout_s=None):
+def execute_julia_optimize(case_path, out_dir=None, *, params, timeout_s=None):
     """Run the forecast BHP optimization driver (jutul_optimize.jl).
 
     The driver writes optimal_bhp.csv, production.csv and summary.json under
@@ -184,12 +198,19 @@ def execute_julia_optimize(case_path, out_dir, *, params=None, timeout_s=None):
     ----------
     case_path : str | Path
         Path to the .DATA file.
-    out_dir : str | Path
+    out_dir : str | Path | None
         Directory that receives the driver output (created if missing).
-    params : dict | None
-        CLI options forwarded as --<key>=<value> (e.g. months, granularity,
-        oil-price, gas-price, water-price, water-cost, gas-cost, discount-rate,
-        bhp-prod-min/max, bhp-inj-min/max).
+        Defaults to <case directory>/optimization/.
+    params : dict
+        Required CLI options: months, oil-price, gas-price, water-price,
+        water-cost, gas-cost, discount-rate, bhp-prod-min/max and
+        bhp-inj-min/max. history-cache is optional.
+
+        Two are given in user-friendly units and converted here to the
+        driver's raw units:
+          - water-price: positive water-handling cost in $/m3 (negated, since
+            produced water is a cost in npv_objective);
+          - discount-rate: percent per year (divided by 100).
     timeout_s : int | None
         Subprocess timeout in seconds.
 
@@ -198,9 +219,20 @@ def execute_julia_optimize(case_path, out_dir, *, params=None, timeout_s=None):
     Path
         The out_dir.
     """
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+    required = ("months", "oil-price", "gas-price", "water-price", "water-cost",
+                "gas-cost", "discount-rate", "bhp-prod-min", "bhp-prod-max",
+                "bhp-inj-min", "bhp-inj-max")
+    missing = [key for key in required if key not in params]
+    if missing:
+        raise ValueError(f"Missing required params: {', '.join(missing)}")
 
+    params = dict(params)
+    params["water-price"] = -abs(float(params["water-price"]))
+    params["discount-rate"] = float(params["discount-rate"]) / 100.0
+
+    case_path = Path(case_path)
+    out_dir = Path(out_dir) if out_dir else case_path.parent / "optimization"
+    out_dir.mkdir(parents=True, exist_ok=True)
     script = Path(__file__).parents[2] / "bin" / "jutul_optimize.jl"
     argv = [os.environ.get("JULIA", "julia"),
             "--threads=auto",
@@ -208,7 +240,7 @@ def execute_julia_optimize(case_path, out_dir, *, params=None, timeout_s=None):
             str(script),
             f"--case={case_path}",
             f"--out={out_dir}"]
-    for key, value in (params or {}).items():
+    for key, value in params.items():
         argv.append(f"--{key}={value}")
 
     _stream_julia(argv, out_dir / "julia.log", timeout_s, script.name)

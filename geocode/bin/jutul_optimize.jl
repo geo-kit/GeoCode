@@ -2,8 +2,8 @@
 # Universal forecast BHP optimization driver.
 #
 # Loads a .DATA deck, simulates its history, then builds an N-month forecast
-# and optimizes per-period BHP (shared by well role, or per individual well) to
-# maximize forecast NPV via JutulDarcy adjoint gradients + L-BFGS.
+# and optimizes per-period BHP per individual well to maximize forecast NPV via
+# JutulDarcy adjoint gradients + L-BFGS.
 #
 # Well roles (producer/injector) are derived from the deck's historical control
 # types (last non-Disabled control wins), NOT from well-name prefixes, so the
@@ -11,11 +11,11 @@
 #
 # CLI:
 #   jutul_optimize.jl --case=<path> --out=<dir>
-#       [--months=N] [--granularity=shared|per-well]
-#       [--oil-price=] [--gas-price=] [--water-price=]
-#       [--water-cost=] [--gas-cost=] [--discount-rate=]
-#       [--bhp-prod-min=] [--bhp-prod-max=]
-#       [--bhp-inj-min=]  [--bhp-inj-max=]   (all BHP in bar)
+#       --months=N
+#       --oil-price= --gas-price= --water-price=
+#       --water-cost= --gas-cost= --discount-rate=
+#       --bhp-prod-min= --bhp-prod-max=
+#       --bhp-inj-min=  --bhp-inj-max=   (all BHP in bar)
 # Prices/costs are $/m3 (oil, water) and $/m3 (gas); see liquid_unit/gas_unit=1.
 #
 # Env L-BFGS caps: OPTI_MAX_IT, OPTI_MAX_INITIAL_UPDATE,
@@ -42,11 +42,7 @@ const BAR = 1.0e5  # bar -> Pa
 # CLI parsing
 # ---------------------------------------------------------------------------
 function parse_args(argv)
-    d = Dict{String,Any}(
-        "months" => 12, "granularity" => "shared",
-        "oil-price" => 60.0, "gas-price" => 0.0, "water-price" => -5.0,
-        "water-cost" => 5.0, "gas-cost" => 0.0, "discount-rate" => 0.10,
-    )
+    d = Dict{String,Any}()
     floats = Set(["oil-price", "gas-price", "water-price", "water-cost",
                   "gas-cost", "discount-rate", "bhp-prod-min", "bhp-prod-max",
                   "bhp-inj-min", "bhp-inj-max"])
@@ -55,7 +51,7 @@ function parse_args(argv)
         kv = split(a[3:end], "=", limit = 2)
         length(kv) == 2 || continue
         k, v = String(kv[1]), String(kv[2])
-        if k in ("case", "out", "granularity", "history-cache")
+        if k in ("case", "out", "history-cache")
             d[k] = v
         elseif k == "months"
             d[k] = parse(Int, v)
@@ -65,8 +61,12 @@ function parse_args(argv)
     end
     haskey(d, "case") || error("--case=<path> is required")
     haskey(d, "out") || error("--out=<dir> is required")
-    d["granularity"] in ("shared", "per-well") ||
-        error("--granularity must be 'shared' or 'per-well'")
+    required = ("months", "oil-price", "gas-price", "water-price", "water-cost",
+                "gas-cost", "discount-rate", "bhp-prod-min", "bhp-prod-max",
+                "bhp-inj-min", "bhp-inj-max")
+    missing = filter(k -> !haskey(d, k), required)
+    isempty(missing) ||
+        error("Missing required options: " * join(("--" * k for k in missing), ", "))
     return d
 end
 
@@ -123,11 +123,10 @@ function main(argv)
     outdir = args["out"]
     mkpath(outdir)
     months = args["months"]
-    granularity = args["granularity"]
 
     println("="^70)
     println("  Forecast BHP optimization: $(basename(args["case"]))")
-    println("  months=$months  granularity=$granularity")
+    println("  months=$months")
     println("="^70)
 
     # -- Load history -------------------------------------------------------
@@ -171,7 +170,7 @@ function main(argv)
 
     # control_specs: (label, wells, bhp_min, bhp_max, x0_norm, role).
     # Start BHP optimization from the final historical BHP, clipped to the
-    # requested bounds. Shared controls use the group mean.
+    # requested bounds. One control per individual well.
     function spec_for(label, wells, role)
         prefix = role == "producer" ? "bhp-prod" : "bhp-inj"
         bmin = args["$prefix-min"] * BAR
@@ -182,16 +181,11 @@ function main(argv)
         return (label, wells, bmin, bmax, x0n, role)
     end
     specs = Tuple{Symbol,Vector{Symbol},Float64,Float64,Float64,String}[]
-    if granularity == "shared"
-        isempty(producers) || push!(specs, spec_for(:PROD, producers, "producer"))
-        isempty(injectors) || push!(specs, spec_for(:INJECT, injectors, "injector"))
-    else
-        for w in producers
-            push!(specs, spec_for(w, [w], "producer"))
-        end
-        for w in injectors
-            push!(specs, spec_for(w, [w], "injector"))
-        end
+    for w in producers
+        push!(specs, spec_for(w, [w], "producer"))
+    end
+    for w in injectors
+        push!(specs, spec_for(w, [w], "injector"))
     end
     ncontrols = length(specs)
     println("       Variables: $(ncontrols * nperiods) ($ncontrols controls x $nperiods periods)")
@@ -345,7 +339,7 @@ function main(argv)
     end
 
     summary = Dict{String,Any}(
-        "case" => args["case"], "granularity" => granularity,
+        "case" => args["case"],
         "months" => months, "periods" => nperiods,
         "prices" => Dict("oil" => args["oil-price"], "gas" => args["gas-price"],
             "water" => args["water-price"], "water_inj" => args["water-cost"],
