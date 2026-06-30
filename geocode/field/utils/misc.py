@@ -12,6 +12,7 @@ from pathlib import Path
 
 import numpy as np
 import psutil
+from IPython.display import display
 from tqdm import tqdm
 
 
@@ -141,7 +142,6 @@ def _stream_julia(argv, logpath, timeout_s, script_name):
     deadline = None if timeout_s is None else time.monotonic() + timeout_s
     notebook = not hasattr(sys.stdout, "buffer")
     if notebook:
-        from IPython.display import display
         output = display({"text/plain": ""}, raw=True, display_id=True)
         decoder = codecs.getincrementaldecoder("utf-8")("replace")
         stable, buf = [], ""
