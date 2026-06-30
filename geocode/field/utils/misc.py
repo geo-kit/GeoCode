@@ -1,5 +1,7 @@
 """Miscellaneous utils."""
+import codecs
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -94,49 +96,52 @@ def execute_tnav_models(models, license_url,
                 raise err
 
 
-def execute_julia_models(runid, case_path, out_root, *,
-                         restart="none", timeout_s=None):
+def execute_julia_simulate(case_path, *, timeout_s=None):
     """Run the JutulDarcy driver (jutul_run.jl) as a Julia subprocess.
 
     The driver writes states.h5, wells.h5, cell_indices.h5 and manifest.json
-    under <out_root>/<runid>/; consumers read them via georead.jutul.load.
+    under <case directory>/result/<case name>/.
 
     Parameters
     ----------
-    runid : str
-        Name of the run subdirectory.
     case_path : str | Path
         Path to the .DATA file.
-    out_root : str | Path
-        Directory that will contain the runid subdirectory.
-    restart : "none" | "latest" | int
-        JutulDarcy restart mode. "none" removes previous results; other
-        modes reuse the JLD2 cache under <runid>/jutul_state/.
     timeout_s : int | None
         Subprocess timeout in seconds.
 
     Returns
     -------
     Path
-        The runid subdirectory.
+        The model result directory.
     """
-    runid_dir = Path(out_root) / runid
-    if restart == "none" and runid_dir.exists():
-        shutil.rmtree(runid_dir)
-    runid_dir.mkdir(parents=True, exist_ok=True)
+    case_path = Path(case_path)
+    result_dir = case_path.parent / "result" / case_path.stem
+    if result_dir.exists():
+        shutil.rmtree(result_dir)
+    result_dir.mkdir(parents=True)
 
     script = Path(__file__).parents[2] / "bin" / "jutul_run.jl"
-    if isinstance(restart, int):
-        restart = f"step:{restart}"
     argv = [os.environ.get("JULIA", "julia"),
+            "--threads=auto",
             f"--project={script.parent}",
             str(script),
             f"--case={case_path}",
-            f"--out={runid_dir}",
-            f"--restart={restart}"]
+            f"--out={result_dir}",
+            "--restart=none"]
 
-    logpath = runid_dir / "julia.log"
+    _stream_julia(argv, result_dir / "julia.log", timeout_s, script.name)
+    return result_dir
+
+
+def _stream_julia(argv, logpath, timeout_s, script_name):
+    "Run a Julia subprocess, streaming stdout to the console and julia.log."
     deadline = None if timeout_s is None else time.monotonic() + timeout_s
+    notebook = not hasattr(sys.stdout, "buffer")
+    if notebook:
+        from IPython.display import display
+        output = display({"text/plain": ""}, raw=True, display_id=True)
+        decoder = codecs.getincrementaldecoder("utf-8")("replace")
+        recent = ""
     with open(logpath, "wb") as log:
         p = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)#pylint:disable=consider-using-with
         # Stream driver output (including the JutulDarcy progress bar) to the
@@ -146,12 +151,65 @@ def execute_julia_models(runid, case_path, out_root, *,
             if not chunk:
                 break
             log.write(chunk)
-            sys.stdout.buffer.write(chunk)
-            sys.stdout.flush()
+            if notebook:
+                recent = (recent + decoder.decode(chunk))[-8192:]
+                lines = [line.strip() for line in re.sub(
+                    r"\x1b\[[0-?]*[ -/]*[@-~]", "", recent
+                ).replace("\r", "\n").splitlines() if line.strip()]
+                if lines:
+                    text = next((line for line in reversed(lines)
+                                 if line.startswith(("Progress ", "Reading "))),
+                                lines[-1])
+                    output.update({"text/plain": text}, raw=True)
+            else:
+                sys.stdout.buffer.write(chunk)
+                sys.stdout.flush()
             if deadline is not None and time.monotonic() > deadline:
                 kill(p.pid)
-                raise TimeoutError(f"Julia simulation exceeded {timeout_s}s, see {logpath}")
+                raise TimeoutError(f"{script_name} exceeded {timeout_s}s, see {logpath}")
         rc = p.wait()
     if rc != 0:
-        raise RuntimeError(f"jutul_run.jl exited with code {rc}, see {logpath}")
-    return runid_dir
+        raise RuntimeError(f"{script_name} exited with code {rc}, see {logpath}")
+    if notebook:
+        output.update({"text/plain": f"{script_name} completed; full output: {logpath}"}, raw=True)
+
+
+def execute_julia_optimize(case_path, out_dir, *, params=None, timeout_s=None):
+    """Run the forecast BHP optimization driver (jutul_optimize.jl).
+
+    The driver writes optimal_bhp.csv, production.csv and summary.json under
+    out_dir; consumers read them directly.
+
+    Parameters
+    ----------
+    case_path : str | Path
+        Path to the .DATA file.
+    out_dir : str | Path
+        Directory that receives the driver output (created if missing).
+    params : dict | None
+        CLI options forwarded as --<key>=<value> (e.g. months, granularity,
+        oil-price, gas-price, water-price, water-cost, gas-cost, discount-rate,
+        bhp-prod-min/max, bhp-inj-min/max).
+    timeout_s : int | None
+        Subprocess timeout in seconds.
+
+    Returns
+    -------
+    Path
+        The out_dir.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    script = Path(__file__).parents[2] / "bin" / "jutul_optimize.jl"
+    argv = [os.environ.get("JULIA", "julia"),
+            "--threads=auto",
+            f"--project={script.parent}",
+            str(script),
+            f"--case={case_path}",
+            f"--out={out_dir}"]
+    for key, value in (params or {}).items():
+        argv.append(f"--{key}={value}")
+
+    _stream_julia(argv, out_dir / "julia.log", timeout_s, script.name)
+    return out_dir
