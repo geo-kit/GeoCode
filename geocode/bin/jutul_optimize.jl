@@ -16,6 +16,7 @@
 #       --water-cost= --gas-cost= --discount-rate=
 #       --bhp-prod-min= --bhp-prod-max=
 #       --bhp-inj-min=  --bhp-inj-max=   (all BHP in bar)
+#       --max-it=N      (optional, defaults to Jutul unit_box_bfgs default: 25)
 # Prices/costs are $/m3 (oil, water) and $/m3 (gas); see liquid_unit/gas_unit=1.
 #
 # Env L-BFGS caps: OPTI_MAX_IT, OPTI_MAX_INITIAL_UPDATE,
@@ -53,7 +54,7 @@ function parse_args(argv)
         k, v = String(kv[1]), String(kv[2])
         if k in ("case", "out", "history-cache")
             d[k] = v
-        elseif k == "months"
+        elseif k in ("months", "max-it")
             d[k] = parse(Int, v)
         elseif k in floats
             d[k] = parse(Float64, v)
@@ -283,7 +284,7 @@ function main(argv)
     println("\n[3/5] Simulating base and optimizing (L-BFGS + adjoint) ...")
     base_sim = simulate_reservoir(case_base; info_level = -1)
     base_npv, _, _ = evaluate_npv(case_base, base_sim.result)
-    max_it = parse(Int, get(ENV, "OPTI_MAX_IT", "10"))
+    max_it = get(args, "max-it", parse(Int, get(ENV, "OPTI_MAX_IT", "25")))
     _, _, opt_history = Jutul.unit_box_bfgs(x0, bhp_objective!;
         maximize = true, max_it = max_it,
         max_initial_update = parse(Float64, get(ENV, "OPTI_MAX_INITIAL_UPDATE", "0.05")),
@@ -315,6 +316,7 @@ function main(argv)
     open(joinpath(outdir, "production.csv"), "w") do io
         println(io, "period,start_date,end_date,well,role," *
             "base_oil_rate_m3_day,opt_oil_rate_m3_day," *
+            "base_gas_rate_m3_day,opt_gas_rate_m3_day," *
             "base_water_rate_m3_day,opt_water_rate_m3_day," *
             "base_water_inj_m3_day,opt_water_inj_m3_day")
         for i in 1:nperiods
@@ -323,6 +325,7 @@ function main(argv)
                 opt = prod_opt[w]
                 println(io, "$i,$(fdates[i]),$(fdates[i+1]),$w,$(base.role)," *
                     "$(fmt(base.oil[i])),$(fmt(opt.oil[i]))," *
+                    "$(fmt(base.gas[i])),$(fmt(opt.gas[i]))," *
                     "$(fmt(base.water[i])),$(fmt(opt.water[i]))," *
                     "$(fmt(base.winj[i])),$(fmt(opt.winj[i]))")
             end
@@ -352,6 +355,7 @@ function main(argv)
         "n_variables" => ncontrols * nperiods,
         "base_npv" => base_npv, "opt_npv" => opt_npv,
         "improvement_pct" => improvement, "max_it" => max_it,
+        "iterations" => length(opt_history.val),
         "converged" => converged,
     )
     open(joinpath(outdir, "summary.json"), "w") do io
@@ -369,14 +373,16 @@ function extract_production(sim, producers, injectors, nstep)
     for w in producers
         wd = ws[w]
         oil = haskey(wd, :orat) ? max.(-n(wd[:orat]), 0.0)[1:nstep] : zeros(nstep)
+        gas = haskey(wd, :grat) ? max.(-n(wd[:grat]), 0.0)[1:nstep] : zeros(nstep)
         water = haskey(wd, :wrat) ? max.(-n(wd[:wrat]), 0.0)[1:nstep] : zeros(nstep)
-        production[w] = (role = "producer", oil = oil, water = water,
+        production[w] = (role = "producer", oil = oil, gas = gas, water = water,
             winj = zeros(nstep))
     end
     for w in injectors
         wd = ws[w]
         winj = haskey(wd, :wrat) ? max.(n(wd[:wrat]), 0.0)[1:nstep] : zeros(nstep)
         production[w] = (role = "injector", oil = zeros(nstep),
+            gas = zeros(nstep),
             water = zeros(nstep), winj = winj)
     end
     return production
