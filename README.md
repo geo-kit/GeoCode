@@ -24,6 +24,10 @@ Clone the repository:
 
     git clone https://github.com/geo-kit/GeoCode.git
 
+To run reservoir simulations with [JutulDarcy](https://github.com/sintefmath/JutulDarcy.jl),
+install [Julia](https://julialang.org/downloads/) and instantiate the driver dependencies once:
+
+    julia --project=geocode/bin -e "using Pkg; Pkg.instantiate()"
 
 > [!Note]
 > Note: the project is in developement. We welcome contributions and collaborations.

@@ -5,4 +5,4 @@ from .states import States
 from .wells import Wells
 from .field import Field
 from .tables import Tables
-from .utils.misc import execute_tnav_models
+from .utils.misc import execute_tnav_models, execute_julia_simulate, execute_julia_optimize

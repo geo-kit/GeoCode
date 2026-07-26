@@ -7,7 +7,19 @@ from .base_tree import BaseTree, BaseTreeNode
 
 from .utils.decorators import apply_to_each_node
 
-FACES = {'X': [1, 3, 5, 7], 'Y': [2, 3, 6, 7], 'Z': [4, 5, 6, 7]}
+# Corner indices of each cell face for Eclipse FAULTS directions; X/Y/Z and
+# the I/J/K aliases mean the + face, the - suffix selects the opposite one.
+_FACE_LOW  = {'X': [0, 2, 4, 6], 'Y': [0, 1, 4, 5], 'Z': [0, 1, 2, 3]}
+_FACE_HIGH = {'X': [1, 3, 5, 7], 'Y': [2, 3, 6, 7], 'Z': [4, 5, 6, 7]}
+FACES = {}
+for _axis_letter, _axis_alias in (('X', 'I'), ('Y', 'J'), ('Z', 'K')):
+    FACES[_axis_letter]        = _FACE_HIGH[_axis_letter]
+    FACES[_axis_letter + '+']  = _FACE_HIGH[_axis_letter]
+    FACES[_axis_letter + '-']  = _FACE_LOW[_axis_letter]
+    FACES[_axis_alias]         = _FACE_HIGH[_axis_letter]
+    FACES[_axis_alias + '+']   = _FACE_HIGH[_axis_letter]
+    FACES[_axis_alias + '-']   = _FACE_LOW[_axis_letter]
+del _axis_letter, _axis_alias, _FACE_LOW, _FACE_HIGH
 
 class FaultsNode(BaseTreeNode):
     """Faults node."""

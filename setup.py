@@ -2,7 +2,7 @@
 import re
 from setuptools import setup, find_packages
 
-with open('deepfield/__init__.py', 'r') as f:
+with open('geocode/__init__.py', 'r') as f:
     VERSION = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", f.read(), re.M)
     if not VERSION:
         raise RuntimeError("Unable to find version string.")
