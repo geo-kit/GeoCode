@@ -1,3 +1,7 @@
+### 🌐 Multi-Language Support
+
+**English** | [Русский](../../translations/ru/open_data/spe10model2/README.md)
+
 ## SPE 10 – MODEL 2
 
 This folder contains reservoir model SPE 10 – MODEL 2 presended in the SPE paper "Tenth SPE comparative solution project: a comparison of upscaling techniques"

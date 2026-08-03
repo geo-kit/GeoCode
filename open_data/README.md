@@ -1,3 +1,7 @@
+### 🌐 Multi-Language Support
+
+**English** | [Русский](../translations/ru/open_data/README.md)
+
 ## Open datasets
 
 This folder contains a set of reservoir models to play with `GeoCode` framework:
