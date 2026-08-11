@@ -1,5 +1,8 @@
 [![Python](https://img.shields.io/badge/python-3-blue.svg)](https://python.org)
 
+### 🌐 Multi-Language Support
+
+**English** | [Русский](./translations/ru/README.md)
 
 # GeoCode
 
@@ -13,7 +16,7 @@ Python framework for reservoir engineering.
 * interactive 3D visualization
 * reservoir preprocessing tools
 * detailed [documentation](https://geo-kit.github.io/GeoCode/)
-* [notebooks](/notebooks) to explore the framework step-by-step
+* [notebooks](./notebooks) to explore the framework step-by-step
 
  > [!TIP]
  > Try out a new [web application](https://github.com/geo-kit/GeoView.git) based on GeoCode for visualization and exploration of reservoir models.

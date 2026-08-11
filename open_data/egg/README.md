@@ -1,3 +1,7 @@
+### 🌐 Multi-Language Support
+
+**English** | [Русский](../../translations/ru/open_data/egg/README.md)
+
 ## Egg reservoir model
 
 This folder contains simulated Egg reservoir model.
