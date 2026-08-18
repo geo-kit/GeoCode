@@ -23,6 +23,7 @@ setup(
     long_description=LONG_DESCRIPTION,
     zip_safe=False,
     platforms='any',
+    package_data={'geocode': ['bin/*.toml', 'bin/*.jl']},
     install_requires=[
         'setuptools',
 		'numpy',
