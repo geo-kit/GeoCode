@@ -6,4 +6,10 @@ __pycache__/
 credentials.py
 *.log
 open_data/**/RESULTS/
+open_data/**/jutul_runs/
+open_data/**/result/
+open_data/**/optimization/
+open_data/**/optimization_plot.csv
 *.pytest_cache/
+/.omc
+/.omx

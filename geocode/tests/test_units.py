@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ..field import Field
+from ..field.utils import misc
 
 from .data.test_wells import TEST_WELLS
 
@@ -87,3 +88,51 @@ class TestBenchmarksLoading():
             assert len(failed) == 0
         else:
             warnings.warn("Benchmarks folder does not exist")
+
+
+def test_julia_result_path(monkeypatch, tmp_path):
+    """A model writes to and overwrites its <case dir>/result/ directory."""
+    case_path = tmp_path / "MODEL.DATA"
+    result_dir = tmp_path / "result"
+    result_dir.mkdir(parents=True)
+    (result_dir / "stale").touch()
+    called = {}
+    monkeypatch.setattr(misc, "_stream_julia",
+                        lambda argv, *_: called.update(argv=argv))
+
+    assert misc.execute_julia_simulate(case_path) == result_dir
+    assert not (result_dir / "stale").exists()
+    assert "--threads=auto" in called["argv"]
+    assert f"--out={result_dir}" in called["argv"]
+
+    # An explicit result_dir overrides the default location.
+    custom = tmp_path / "elsewhere" / "MODEL"
+    assert misc.execute_julia_simulate(case_path, result_dir=custom) == custom
+    assert f"--out={custom}" in called["argv"]
+
+
+def _optimization_params():
+    return {
+        "months": 3,
+        "oil-price": 600.0,
+        "gas-price": 0.12,
+        "water-price": 3.0,
+        "water-cost": 3.0,
+        "gas-cost": 0.12,
+        "discount-rate": 10,
+        "bhp-prod-min": 200,
+        "bhp-prod-max": 400,
+        "bhp-inj-min": 200,
+        "bhp-inj-max": 400,
+    }
+
+
+def test_julia_optimize_requires_all_parameters(tmp_path):
+    """Optimization must not start with implicit economic assumptions."""
+    out_dir = tmp_path / "optimization"
+
+    with pytest.raises(ValueError, match="oil-price"):
+        misc.execute_julia_optimize(tmp_path / "MODEL.DATA", out_dir, params={})
+
+    assert not out_dir.exists()
+
